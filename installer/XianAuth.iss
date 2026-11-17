@@ -1,7 +1,7 @@
 ﻿; 闲·认证 Inno Setup 脚本。需要 UTF-8 BOM。
 
 #define MyAppName "闲·认证"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.3.0"
 #define MyAppPublisher "xian-renzheng"
 #define MyAppExeName "XianAuth.exe"
 
@@ -14,7 +14,7 @@ DefaultDirName={autopf}\XianRenzheng
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\artifacts
-OutputBaseFilename=XianRenzheng-Setup-0.2.0
+OutputBaseFilename=XianRenzheng-Setup-0.3.0
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -22,7 +22,7 @@ PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64
 SetupIconFile=..\assets\xian-auth.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
-VersionInfoVersion=0.2.0.0
+VersionInfoVersion=0.3.0.0
 
 [Languages]
 Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"

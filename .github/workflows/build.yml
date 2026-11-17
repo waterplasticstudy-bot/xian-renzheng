@@ -39,7 +39,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force artifacts | Out-Null
-          Compress-Archive -Path publish\* -DestinationPath artifacts/XianRenzheng-0.2.0-win.zip
+          Compress-Archive -Path publish\* -DestinationPath artifacts/XianRenzheng-0.3.0-win.zip
           Copy-Item docs/ui-preview.png artifacts/ui-preview.png
 
       - name: Installer
@@ -50,10 +50,10 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: XianRenzheng-0.2.0
+          name: XianRenzheng-0.3.0
           path: |
-            artifacts/XianRenzheng-0.2.0-win.zip
-            artifacts/XianRenzheng-Setup-0.2.0.exe
+            artifacts/XianRenzheng-0.3.0-win.zip
+            artifacts/XianRenzheng-Setup-0.3.0.exe
             artifacts/ui-preview.png
           if-no-files-found: error
 
@@ -62,18 +62,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/XianRenzheng-0.2.0-win.zip
-            artifacts/XianRenzheng-Setup-0.2.0.exe
+            artifacts/XianRenzheng-0.3.0-win.zip
+            artifacts/XianRenzheng-Setup-0.3.0.exe
             artifacts/ui-preview.png
           generate_release_notes: false
           body: |
-            ## 闲·认证 0.2.0
+            ## 闲·认证 0.3.0
 
             Windows 校园网 / Wi-Fi 网页门户自动认证。仓库不包含任何一所学校的地址或账号。门户配置只在你自己的电脑上生成。
 
-            - 安装包：`XianRenzheng-Setup-0.2.0.exe`
-            - 绿色压缩包：`XianRenzheng-0.2.0-win.zip`
+            - 安装包：`XianRenzheng-Setup-0.3.0.exe`
+            - 绿色压缩包：`XianRenzheng-0.3.0-win.zip`
             - 界面示意：`ui-preview.png`（绘制稿，不是实机截图）
+
+            ### 本版新增
+
+            **认证耗时统计**：记录系统启动（Kernel-General 12）或唤醒（Power-Troubleshooter 1）、进入桌面（Winlogon 7001）、Wi-Fi 连上（WLAN-AutoConfig 8001）和认证成功的时间，算出「开机到认证成功」「进桌面到认证成功」，写进日志和 `state.json` 的 `lastTiming`，状态栏显示「上次认证：进桌面后 X 秒完成」。只在开机、登录、唤醒、睡眠恢复、连上无线网、解锁这几种触发下记录，且必须真的提交了凭据并认证成功；注销、立即验证、间隔检测不记录。
+
+            **可配置认证时限**：`config.json` 新增 `authDeadlineSeconds`，默认 15 秒，可设 5–120 秒，界面提供输入框。自动触发先等 Wi-Fi 拿到 IPv4（最多等时限的一半），之后每 1–2 秒做一次「检测 + 认证」，成功或超时即退出；超时记一条「N 秒内未完成认证」日志。账号密码错误立即停止，不在时限内反复重试。手动「立即验证」不受时限限制。
+
+            **新增「用户登录」触发**（`XianAuth-Logon`）：与解锁会话一样不加延迟，输入 PIN 进桌面后立刻开始认证。
 
             立即验证会绑定 Wi-Fi 地址做一次连通性检查，未在线则按本机门户配置认证。VPN 处理覆盖 Bettbox、FlClash、YueLink、Clash Verge Rev、mihomo 和 sing-box：先加一条不持久的主机路由，再在认得出的配置里写直连或路由排除。不读取 Cookie。卸载默认保留本机账号和配置。
 
