@@ -44,6 +44,7 @@ namespace XianAuth
             switch (value)
             {
                 case "boot": return TriggerKind.Boot;
+                case "logon": return TriggerKind.Logon;
                 case "resume": return TriggerKind.Resume;
                 case "sleep": return TriggerKind.Sleep;
                 case "wlan": return TriggerKind.Wlan;

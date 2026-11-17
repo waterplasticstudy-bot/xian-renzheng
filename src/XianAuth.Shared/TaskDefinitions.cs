@@ -15,13 +15,14 @@ namespace XianAuth
     {
         public const string Folder = "\\XianRenzheng";
         public const string BootName = "XianAuth-Boot";
+        public const string LogonName = "XianAuth-Logon";
         public const string ResumeName = "XianAuth-Resume";
         public const string SleepName = "XianAuth-Sleep";
         public const string WlanName = "XianAuth-Wlan";
         public const string UnlockName = "XianAuth-Unlock";
         public const string IntervalName = "XianAuth-Interval";
 
-        public static readonly string[] AllNames = { BootName, ResumeName, SleepName, WlanName, UnlockName, IntervalName };
+        public static readonly string[] AllNames = { BootName, LogonName, ResumeName, SleepName, WlanName, UnlockName, IntervalName };
 
         public static List<ScheduledTaskSpec> Plan(AppConfig config, string exePath)
         {
@@ -61,6 +62,12 @@ namespace XianAuth
                 Xml = BuildXml(exePath, "--trigger wlan", "闲·认证：无线网络已连接",
                     EventTrigger("Microsoft-Windows-WLAN-AutoConfig/Operational", "*[System[(EventID=8001)]]"))
             });
+            // 登录与解锁都不加延迟，输入 PIN 进桌面后立刻开始认证。
+            list.Add(new ScheduledTaskSpec
+            {
+                Name = LogonName,
+                Xml = BuildXml(exePath, "--trigger logon", "闲·认证：用户登录", LogonTrigger())
+            });
             list.Add(new ScheduledTaskSpec
             {
                 Name = UnlockName,
@@ -96,7 +103,7 @@ namespace XianAuth
             return new List<ScheduledTaskSpec>
             {
                 new ScheduledTaskSpec { Name = "Probe-Boot", Xml = BuildXml(exePath, "--trigger boot", "probe", BootTrigger()) },
-                new ScheduledTaskSpec { Name = "Probe-Logon", Xml = BuildXml(exePath, "--trigger boot", "probe", LogonTrigger()) },
+                new ScheduledTaskSpec { Name = "Probe-Logon", Xml = BuildXml(exePath, "--trigger logon", "probe", LogonTrigger()) },
                 new ScheduledTaskSpec { Name = "Probe-KernelPower107", Xml = BuildXml(exePath, "--trigger resume", "probe", EventTrigger("System", "*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and (EventID=107)]]")) },
                 new ScheduledTaskSpec { Name = "Probe-PowerTroubleshooter1", Xml = BuildXml(exePath, "--trigger resume", "probe", EventTrigger("System", "*[System[Provider[@Name='Microsoft-Windows-Power-Troubleshooter'] and (EventID=1)]]")) },
                 new ScheduledTaskSpec { Name = "Probe-Wlan8001", Xml = BuildXml(exePath, "--trigger wlan", "probe", EventTrigger("Microsoft-Windows-WLAN-AutoConfig/Operational", "*[System[(EventID=8001)]]")) },

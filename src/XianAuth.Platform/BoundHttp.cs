@@ -84,11 +84,18 @@ namespace XianAuth
 
         public static ConnectResult CheckOnline(IPAddress localAddress)
         {
-            HttpResult first = Send(new HttpRequestSpec { Method = "GET", Url = ConnectProbe.ProbeUrl, TimeoutMs = 6000 }, localAddress);
+            return CheckOnline(localAddress, 6000);
+        }
+
+        public static ConnectResult CheckOnline(IPAddress localAddress, int timeoutMs)
+        {
+            if (timeoutMs <= 0)
+                timeoutMs = 6000;
+            HttpResult first = Send(new HttpRequestSpec { Method = "GET", Url = ConnectProbe.ProbeUrl, TimeoutMs = timeoutMs }, localAddress);
             ConnectResult interpreted = ConnectProbe.Interpret(first.Status, first.Body, first.Location, first.Error);
             if (interpreted.Kind != ConnectKind.ProbeRedirect || string.IsNullOrEmpty(interpreted.RedirectUrl))
                 return interpreted;
-            HttpResult second = Send(new HttpRequestSpec { Method = "GET", Url = interpreted.RedirectUrl, TimeoutMs = 6000 }, localAddress);
+            HttpResult second = Send(new HttpRequestSpec { Method = "GET", Url = interpreted.RedirectUrl, TimeoutMs = timeoutMs }, localAddress);
             return ConnectProbe.Interpret(second.Status, second.Body, null, second.Error);
         }
 

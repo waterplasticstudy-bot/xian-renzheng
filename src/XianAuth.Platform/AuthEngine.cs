@@ -36,6 +36,9 @@ namespace XianAuth
                 ? PowerEvents.Read()
                 : new PowerSignals();
 
+            // 时间点在进程一开始就读取，避免认证过程把「进桌面」的相对时间拉长。
+            TimingMarks marks = trigger == TriggerKind.Logout ? null : TimingEvents.Read(trigger);
+
             if (trigger != TriggerKind.Logout && !TriggerPolicy.ShouldRun(trigger, config, signals))
             {
                 string skip = "本次触发未启用，已跳过。";
@@ -80,37 +83,150 @@ namespace XianAuth
             }
 
             List<PortalProfile> profiles = Storage.LoadProfiles(paths);
-            int started = Environment.TickCount;
-            int attempts = singlePass ? 1 : (trigger == TriggerKind.Logout ? 2 : RetryPlan.MaxAttempts);
-            int[] delays = singlePass ? new[] { 0 } : (trigger == TriggerKind.Logout ? new[] { 0, 3000 } : RetryPlan.DelayBeforeAttemptMs);
             AuthOutcome last = AuthOutcome.Transient("尚未开始");
             bool connectTried = false;
-            for (int attempt = 0; attempt < attempts; attempt++)
+            bool timedOut = false;
+            int deadlineSeconds = config.AuthDeadlineSeconds;
+
+            if (singlePass || trigger == TriggerKind.Logout)
             {
-                int elapsed = unchecked(Environment.TickCount - started);
-                if (attempt > 0)
+                int started = Environment.TickCount;
+                int attempts = singlePass ? 1 : (trigger == TriggerKind.Logout ? 2 : RetryPlan.MaxAttempts);
+                int[] delays = singlePass ? new[] { 0 } : (trigger == TriggerKind.Logout ? new[] { 0, 3000 } : RetryPlan.DelayBeforeAttemptMs);
+                for (int attempt = 0; attempt < attempts; attempt++)
                 {
-                    if (trigger != TriggerKind.Logout && !RetryPlan.CanStart(attempt, elapsed))
+                    int elapsed = unchecked(Environment.TickCount - started);
+                    if (attempt > 0)
+                    {
+                        if (trigger != TriggerKind.Logout && !RetryPlan.CanStart(attempt, elapsed))
+                            break;
+                        System.Threading.Thread.Sleep(delays[attempt]);
+                    }
+                    Report(progress, "正在检测连通性…");
+                    last = Attempt(trigger, config, profiles, account, password, progress, ref connectTried,
+                        trigger == TriggerKind.Logout ? 4000 : 8000, 8000);
+                    DailyLog.Info("第 " + (attempt + 1).ToString(CultureInfo.InvariantCulture) + " 次：" + last.Status + " " + SecretRedactor.Redact(last.Message));
+                    if (!last.ShouldRetry)
                         break;
-                    System.Threading.Thread.Sleep(delays[attempt]);
                 }
-                Report(progress, "正在检测连通性…");
-                last = Attempt(trigger, config, profiles, account, password, progress, ref connectTried);
-                DailyLog.Info("第 " + (attempt + 1).ToString(CultureInfo.InvariantCulture) + " 次：" + last.Status + " " + SecretRedactor.Redact(last.Message));
-                if (!last.ShouldRetry)
-                    break;
+            }
+            else
+            {
+                // 自动触发按「N 秒内完成认证」执行：先等 Wi-Fi 拿到 IPv4（最多时限的一半），
+                // 然后每 1–2 秒做一次「检测 + 认证」，成功、账号被拒或超时就退出。
+                int budgetMs = deadlineSeconds * 1000;
+                int started = Environment.TickCount;
+                WaitForWifi(config, Math.Max(1000, budgetMs / 2), ref connectTried);
+                for (int attempt = 0; ; attempt++)
+                {
+                    int elapsed = unchecked(Environment.TickCount - started);
+                    int remaining = budgetMs - elapsed;
+                    if (remaining <= 0)
+                    {
+                        timedOut = true;
+                        break;
+                    }
+                    Report(progress, "正在检测连通性…");
+                    int httpTimeout = Math.Max(1500, Math.Min(8000, remaining));
+                    last = Attempt(trigger, config, profiles, account, password, progress, ref connectTried,
+                        Math.Min(1500, remaining), httpTimeout);
+                    DailyLog.Info("第 " + (attempt + 1).ToString(CultureInfo.InvariantCulture) + " 次：" + last.Status + " " + SecretRedactor.Redact(last.Message));
+                    if (!last.ShouldRetry)
+                        break;
+                    elapsed = unchecked(Environment.TickCount - started);
+                    remaining = budgetMs - elapsed;
+                    if (remaining <= 0)
+                    {
+                        timedOut = true;
+                        break;
+                    }
+                    // 间隔在 1–2 秒之间交替，既及时又不会把门户打得太频繁。
+                    int wait = Math.Min(1000 + ((attempt % 2) * 1000), remaining);
+                    System.Threading.Thread.Sleep(wait);
+                }
+                if (timedOut && !last.IsOnline)
+                {
+                    string message = deadlineSeconds.ToString(CultureInfo.InvariantCulture) + " 秒内未完成认证";
+                    DailyLog.Info(message);
+                    last = AuthOutcome.Transient(message);
+                }
             }
 
             if (last.Status == AuthStatus.CredentialRejected)
                 state.ConsecutiveCredentialFailures++;
             else if (last.IsOnline)
                 state.ConsecutiveCredentialFailures = 0;
+
+            if (last.IsOnline && marks != null && trigger != TriggerKind.Manual)
+            {
+                AuthTiming timing = TimingCalculator.Compute(trigger, marks.SystemBoot, marks.DesktopReady, marks.WifiConnected, DateTime.UtcNow);
+                state.LastTiming = timing;
+                LogTiming(timing);
+            }
+
             state.LastSummary = last.Message;
             Storage.SaveState(paths, state);
             return AuthRunResult.From(last);
         }
 
-        static AuthOutcome Attempt(TriggerKind trigger, AppConfig config, List<PortalProfile> profiles, string account, string password, Action<string> progress, ref bool connectTried)
+        static void LogTiming(AuthTiming timing)
+        {
+            if (timing == null)
+                return;
+            DailyLog.Info("耗时统计：系统启动=" + Display(timing.SystemBootUtc)
+                + "，进入桌面=" + Display(timing.DesktopReadyUtc)
+                + "，Wi-Fi 连接=" + Display(timing.WifiConnectedUtc)
+                + "，认证成功=" + Display(timing.AuthSuccessUtc)
+                + "，开机到认证=" + Seconds(timing.BootToAuthSeconds)
+                + "，进桌面到认证=" + Seconds(timing.DesktopToAuthSeconds));
+        }
+
+        static string Display(string iso)
+        {
+            DateTimeOffset value;
+            if (string.IsNullOrEmpty(iso) || !DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out value))
+                return "未读到";
+            return value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+        }
+
+        static string Seconds(double? value)
+        {
+            return value.HasValue ? TimingCalculator.Format(value.Value) + " 秒" : "未读到";
+        }
+
+        /// <summary>
+        /// 等目标 SSID 连上并拿到 IPv4，最多等 budgetMs。期间允许自动连接一次。
+        /// </summary>
+        static void WaitForWifi(AppConfig config, int budgetMs, ref bool connectTried)
+        {
+            if (budgetMs <= 0 || config == null || string.IsNullOrEmpty(config.TargetSsid))
+                return;
+            int started = Environment.TickCount;
+            while (true)
+            {
+                try
+                {
+                    WifiSnapshot wifi = Match(NativeWifi.QueryAll(), config.TargetSsid);
+                    if (wifi != null && string.Equals(wifi.Ssid, config.TargetSsid, StringComparison.Ordinal) && wifi.IPv4 != null)
+                        return;
+                    if (config.AutoConnectWifi && !connectTried)
+                    {
+                        connectTried = true;
+                        NativeWifi.TryConnect(config.TargetSsid);
+                    }
+                }
+                catch (Exception)
+                {
+                    // 读无线接口失败不阻断流程，交给后面的 Attempt 记录。
+                }
+                int elapsed = unchecked(Environment.TickCount - started);
+                if (elapsed >= budgetMs)
+                    return;
+                System.Threading.Thread.Sleep(Math.Min(500, budgetMs - elapsed));
+            }
+        }
+
+        static AuthOutcome Attempt(TriggerKind trigger, AppConfig config, List<PortalProfile> profiles, string account, string password, Action<string> progress, ref bool connectTried, int ipv4WaitMs, int httpTimeoutMs)
         {
             List<WifiSnapshot> all;
             try
@@ -140,7 +256,7 @@ namespace XianAuth
                 }
             }
 
-            IPAddress ip = wifi.IPv4 ?? NativeWifi.WaitForIpv4(wifi.InterfaceId, trigger == TriggerKind.Logout ? 4000 : 8000);
+            IPAddress ip = wifi.IPv4 ?? NativeWifi.WaitForIpv4(wifi.InterfaceId, trigger == TriggerKind.Logout ? 4000 : ipv4WaitMs);
             if (ip == null)
                 return AuthOutcome.Transient("无线网卡尚未获得 IPv4");
 
@@ -148,7 +264,7 @@ namespace XianAuth
                 return Logout(profiles, config, account, ip, wifi.Mac);
 
             Report(progress, "正在检测连通性…");
-            ConnectResult probe = BoundHttp.CheckOnline(ip);
+            ConnectResult probe = BoundHttp.CheckOnline(ip, httpTimeoutMs);
             if (probe.Kind == ConnectKind.Online)
                 return AuthOutcome.Success("网络已连通");
 
@@ -162,7 +278,7 @@ namespace XianAuth
                 return AuthOutcome.Rejected("未能识别当前门户，未提交凭据");
             }
             DailyLog.Info("使用门户配置 " + profile.Id + "，绑定地址 " + ip);
-            return Login(profile, account, password, ip, wifi.Mac, probe.RedirectUrl);
+            return Login(profile, account, password, ip, wifi.Mac, probe.RedirectUrl, httpTimeoutMs);
         }
 
         static WifiSnapshot Match(List<WifiSnapshot> all, string ssid)
@@ -177,15 +293,15 @@ namespace XianAuth
             return all.Count > 0 ? all[0] : null;
         }
 
-        static AuthOutcome Login(PortalProfile profile, string account, string password, IPAddress ip, string mac, string redirectUrl)
+        static AuthOutcome Login(PortalProfile profile, string account, string password, IPAddress ip, string mac, string redirectUrl, int httpTimeoutMs)
         {
             if (profile.Kind == "drcom-eportal")
-                return DrcomLogin(profile, account, password, ip);
+                return DrcomLogin(profile, account, password, ip, httpTimeoutMs);
             if (profile.Kind == "srun")
-                return SrunLogin(profile, account, password, ip, redirectUrl);
+                return SrunLogin(profile, account, password, ip, redirectUrl, httpTimeoutMs);
             if (profile.Kind == "ruijie")
-                return RuijieLogin(profile, account, password, ip, redirectUrl);
-            return TemplateLogin(profile, account, password, ip, mac);
+                return RuijieLogin(profile, account, password, ip, redirectUrl, httpTimeoutMs);
+            return TemplateLogin(profile, account, password, ip, mac, httpTimeoutMs);
         }
 
         static AuthOutcome Logout(List<PortalProfile> profiles, AppConfig config, string account, IPAddress ip, string mac)
@@ -247,7 +363,7 @@ namespace XianAuth
             return AuthOutcome.Rejected("当前门户配置没有注销地址");
         }
 
-        static AuthOutcome DrcomLogin(PortalProfile profile, string account, string password, IPAddress ip)
+        static AuthOutcome DrcomLogin(PortalProfile profile, string account, string password, IPAddress ip, int httpTimeoutMs)
         {
             if (profile.Drcom == null)
                 return AuthOutcome.Rejected("Dr.COM 配置不完整");
@@ -256,20 +372,20 @@ namespace XianAuth
             if (DrcomEportal.IsForbiddenAdminUrl(url))
                 return AuthOutcome.Rejected("拒绝访问带验证码的门户后台");
             DailyLog.Info("Dr.COM 登录 " + SecretRedactor.Redact(url));
-            HttpResult http = BoundHttp.Send(new HttpRequestSpec { Method = "GET", Url = url, TimeoutMs = 8000 }, ip);
+            HttpResult http = BoundHttp.Send(new HttpRequestSpec { Method = "GET", Url = url, TimeoutMs = httpTimeoutMs }, ip);
             if (http.Status == 0)
                 return AuthOutcome.Transient(http.Error);
             return JsonpParser.InterpretDrcom(http.Body);
         }
 
-        static AuthOutcome SrunLogin(PortalProfile profile, string account, string password, IPAddress ip, string redirectUrl)
+        static AuthOutcome SrunLogin(PortalProfile profile, string account, string password, IPAddress ip, string redirectUrl, int httpTimeoutMs)
         {
             if (profile.Srun == null || string.IsNullOrEmpty(profile.Srun.BaseUrl))
                 return AuthOutcome.Rejected("深澜配置不完整");
             string acid = string.IsNullOrEmpty(profile.Srun.AcId) ? "1" : profile.Srun.AcId;
             long ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             string challengeUrl = SrunPortal.BuildChallengeUrl(profile.Srun.BaseUrl, account, ip.ToString(), ts);
-            HttpResult challenge = BoundHttp.Send(new HttpRequestSpec { Method = "GET", Url = challengeUrl, TimeoutMs = 8000 }, ip);
+            HttpResult challenge = BoundHttp.Send(new HttpRequestSpec { Method = "GET", Url = challengeUrl, TimeoutMs = httpTimeoutMs }, ip);
             if (challenge.Status == 0)
                 return AuthOutcome.Transient(challenge.Error);
             JObject json;
@@ -278,13 +394,13 @@ namespace XianAuth
             string token = json["challenge"].ToString();
             string loginUrl = SrunPortal.BuildLoginUrl(profile.Srun.BaseUrl, account, password, ip.ToString(), acid, token, ts);
             DailyLog.Info("深澜登录 " + SecretRedactor.Redact(loginUrl));
-            HttpResult login = BoundHttp.Send(new HttpRequestSpec { Method = "GET", Url = loginUrl, TimeoutMs = 8000 }, ip);
+            HttpResult login = BoundHttp.Send(new HttpRequestSpec { Method = "GET", Url = loginUrl, TimeoutMs = httpTimeoutMs }, ip);
             if (login.Status == 0)
                 return AuthOutcome.Transient(login.Error);
             return SrunPortal.Interpret(login.Body);
         }
 
-        static AuthOutcome RuijieLogin(PortalProfile profile, string account, string password, IPAddress ip, string redirectUrl)
+        static AuthOutcome RuijieLogin(PortalProfile profile, string account, string password, IPAddress ip, string redirectUrl, int httpTimeoutMs)
         {
             if (profile.Ruijie == null || string.IsNullOrEmpty(profile.Ruijie.BaseUrl))
                 return AuthOutcome.Rejected("锐捷配置不完整");
@@ -297,7 +413,7 @@ namespace XianAuth
                 Method = "POST",
                 Url = RuijiePortal.PageInfoUrl(profile.Ruijie.BaseUrl),
                 Body = "queryString=" + RuijiePortal.EncodeQueryString(query),
-                TimeoutMs = 8000
+                TimeoutMs = httpTimeoutMs
             }, ip);
             if (page.Status == 0)
                 return AuthOutcome.Transient(page.Error);
@@ -320,7 +436,7 @@ namespace XianAuth
                 Method = "POST",
                 Url = RuijiePortal.LoginUrl(profile.Ruijie.BaseUrl),
                 Body = body,
-                TimeoutMs = 8000
+                TimeoutMs = httpTimeoutMs
             }, ip);
             if (login.Status == 0)
                 return AuthOutcome.Transient(login.Error);
@@ -341,7 +457,7 @@ namespace XianAuth
             return AuthOutcome.Rejected(string.IsNullOrEmpty(message) ? "锐捷认证被拒绝" : message);
         }
 
-        static AuthOutcome TemplateLogin(PortalProfile profile, string account, string password, IPAddress ip, string mac)
+        static AuthOutcome TemplateLogin(PortalProfile profile, string account, string password, IPAddress ip, string mac, int httpTimeoutMs)
         {
             if (profile.Steps == null || profile.Steps.Count == 0)
                 return AuthOutcome.Rejected("门户模板没有请求步骤");
@@ -359,7 +475,7 @@ namespace XianAuth
                     Url = url,
                     Body = body,
                     ContentType = step.ContentType,
-                    TimeoutMs = 8000
+                    TimeoutMs = httpTimeoutMs
                 }, ip);
                 if (last.Status == 0)
                     return AuthOutcome.Transient(last.Error);
