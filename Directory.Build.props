@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup>
-    <Version>0.2.0</Version>
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
+    <Version>0.3.0</Version>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
     <Company>xian-renzheng</Company>
     <Product>闲·认证</Product>
     <Copyright>Copyright © 2026 xian-renzheng contributors</Copyright>

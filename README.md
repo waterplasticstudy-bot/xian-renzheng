@@ -83,7 +83,7 @@ Dr.COM 网页门户、深澜 srun、锐捷 ePortal 会按重定向 URL 选择对
 
 ## 安装
 
-1. 从 [GitHub Actions 的构建产物](../../actions) 或 [Release](../../releases) 下载 `XianRenzheng-Setup-0.2.0.exe`，或以压缩包 `XianRenzheng-0.2.0-win.zip` 解压后直接运行。
+1. 从 [GitHub Actions 的构建产物](../../actions) 或 [Release](../../releases) 下载 `XianRenzheng-Setup-0.3.0.exe`，或以压缩包 `XianRenzheng-0.3.0-win.zip` 解压后直接运行。
 2. 安装程序和设置界面都会请求管理员权限。计划任务要以 SYSTEM 注册，加密文件也要能被 SYSTEM 读到。
 3. 打开「闲·认证」，填写账号和密码，点「保存账号」。
 4. 按需要勾选关机、重启、休眠、睡眠、VPN 和间隔检测。
