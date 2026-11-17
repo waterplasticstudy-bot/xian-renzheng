@@ -37,6 +37,7 @@ namespace XianAuth
     public sealed class AppConfig
     {
         int _intervalMinutes = 10;
+        int _authDeadlineSeconds = 15;
 
         public int ConfigVersion { get; set; }
         public bool AutoAuthEnabled { get; set; }
@@ -57,6 +58,16 @@ namespace XianAuth
             set { _intervalMinutes = value < 1 ? 1 : (value > 720 ? 720 : value); }
         }
 
+        /// <summary>
+        /// 自动认证的时限（秒）。触发后在这个时间内完成检查与登录，超时就退出。
+        /// 允许 5–120 秒，默认 15 秒。
+        /// </summary>
+        public int AuthDeadlineSeconds
+        {
+            get { return _authDeadlineSeconds; }
+            set { _authDeadlineSeconds = value < 5 ? 5 : (value > 120 ? 120 : value); }
+        }
+
         public AppConfig()
         {
             ConfigVersion = 1;
@@ -67,6 +78,7 @@ namespace XianAuth
             AutoConnectWifi = true;
             CredentialFailureLimit = 2;
             IntervalMinutes = 10;
+            AuthDeadlineSeconds = 15;
             TargetSsid = "";
             ActiveProfileId = "";
         }
@@ -83,6 +95,7 @@ namespace XianAuth
         public string CredentialStampUtc { get; set; }
         public string LastSummary { get; set; }
         public string LastRunUtc { get; set; }
+        public AuthTiming LastTiming { get; set; }
     }
 
     public sealed class ChangeRecord

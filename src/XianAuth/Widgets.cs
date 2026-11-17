@@ -122,11 +122,12 @@ namespace XianAuth
     internal sealed class Banner : Panel
     {
         string _text = "就绪";
+        string _timing = "";
         Color _color = Palette.Muted;
 
         public Banner()
         {
-            Height = 78;
+            Height = 96;
             Dock = DockStyle.Bottom;
             BackColor = Palette.Background;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
@@ -135,6 +136,15 @@ namespace XianAuth
         public void ShowMuted(string text) { Set(text, Palette.Muted); }
         public void ShowOk(string text) { Set(text, Palette.Success); }
         public void ShowErr(string text) { Set(text, Palette.Danger); }
+
+        /// <summary>
+        /// 状态栏第二行：上次认证耗时。传空字符串则收起这一行。
+        /// </summary>
+        public void ShowTiming(string text)
+        {
+            _timing = text ?? "";
+            Invalidate();
+        }
 
         void Set(string text, Color color)
         {
@@ -147,7 +157,9 @@ namespace XianAuth
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             e.Graphics.Clear(Palette.Background);
-            Rectangle pill = new Rectangle(16, 12, Math.Max(1, Width - 32), Math.Max(1, Height - 24));
+            bool hasTiming = !string.IsNullOrEmpty(_timing);
+            int pillHeight = hasTiming ? Math.Max(1, Height - 40) : Math.Max(1, Height - 24);
+            Rectangle pill = new Rectangle(16, 10, Math.Max(1, Width - 32), pillHeight);
             using (GraphicsPath glow = PaintUtil.Round(Rectangle.Inflate(pill, 2, 2), pill.Height / 2))
             using (var glowBrush = new SolidBrush(Color.FromArgb(70, _color)))
                 e.Graphics.FillPath(glowBrush, glow);
@@ -159,6 +171,12 @@ namespace XianAuth
                 e.Graphics.DrawPath(pen, path);
                 TextRenderer.DrawText(e.Graphics, _text, Font, Rectangle.Inflate(pill, -16, -4), _color,
                     TextFormatFlags.Left | TextFormatFlags.WordBreak | TextFormatFlags.VerticalCenter);
+            }
+            if (hasTiming)
+            {
+                var area = new Rectangle(16, pill.Bottom + 2, Math.Max(1, Width - 32), Math.Max(1, Height - pill.Bottom - 4));
+                TextRenderer.DrawText(e.Graphics, _timing, Font, area, Palette.Muted,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             }
         }
     }
