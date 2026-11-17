@@ -1,0 +1,17 @@
+{
+  "id": "example-drcom",
+  "name": "示例 Dr.COM ePortal",
+  "kind": "drcom-eportal",
+  "notes": "占位示例。请在本机填写真实门户，不要把真实参数提交到仓库。",
+  "ssids": ["MyCampus-WiFi"],
+  "urlContains": ["portal.example.edu"],
+  "drcom": {
+    "baseUrl": "http://portal.example.edu/eportal/",
+    "userAccountPrefix": ",b,",
+    "mac": "000000000000",
+    "acIp": "",
+    "acName": "example-ac",
+    "jsVersion": "3.0",
+    "loginMethod": "1"
+  }
+}

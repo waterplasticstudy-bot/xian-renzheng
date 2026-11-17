@@ -1,0 +1,80 @@
+name: build
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test
+        run: dotnet test tests/XianAuth.Tests/XianAuth.Tests.csproj -c Release
+
+      - name: Register scheduled tasks
+        run: dotnet test tests/XianAuth.WinTests/XianAuth.WinTests.csproj -c Release
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dotnet publish src/XianAuth/XianAuth.csproj -c Release -o publish -p:DebugType=none -p:DebugSymbols=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet publish src/XianAuthCore/XianAuthCore.csproj -c Release -o publish -p:DebugType=none -p:DebugSymbols=false
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item LICENSE, README.md publish/
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          Compress-Archive -Path publish\* -DestinationPath artifacts/XianRenzheng-0.2.0-win.zip
+          Copy-Item docs/ui-preview.png artifacts/ui-preview.png
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\XianAuth.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: XianRenzheng-0.2.0
+          path: |
+            artifacts/XianRenzheng-0.2.0-win.zip
+            artifacts/XianRenzheng-Setup-0.2.0.exe
+            artifacts/ui-preview.png
+          if-no-files-found: error
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/XianRenzheng-0.2.0-win.zip
+            artifacts/XianRenzheng-Setup-0.2.0.exe
+            artifacts/ui-preview.png
+          generate_release_notes: false
+          body: |
+            ## 闲·认证 0.2.0
+
+            Windows 校园网 / Wi-Fi 网页门户自动认证。仓库不包含任何一所学校的地址或账号。门户配置只在你自己的电脑上生成。
+
+            - 安装包：`XianRenzheng-Setup-0.2.0.exe`
+            - 绿色压缩包：`XianRenzheng-0.2.0-win.zip`
+            - 界面示意：`ui-preview.png`（绘制稿，不是实机截图）
+
+            立即验证会绑定 Wi-Fi 地址做一次连通性检查，未在线则按本机门户配置认证。VPN 处理覆盖 Bettbox、FlClash、YueLink、Clash Verge Rev、mihomo 和 sing-box：先加一条不持久的主机路由，再在认得出的配置里写直连或路由排除。不读取 Cookie。卸载默认保留本机账号和配置。
+
+            许可：MIT。

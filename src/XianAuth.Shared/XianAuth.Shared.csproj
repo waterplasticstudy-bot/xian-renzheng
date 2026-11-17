@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>XianAuth</RootNamespace>
+    <AssemblyName>XianAuth.Shared</AssemblyName>
+    <Description>闲·认证共享逻辑（门户解析、策略、配置模型）</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

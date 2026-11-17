@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>XianAuth</RootNamespace>
+    <AssemblyName>XianAuthCore</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\xian-auth.ico</ApplicationIcon>
+    <Description>闲·认证一次性认证进程</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\XianAuth.Platform\XianAuth.Platform.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\assets\xian-auth.ico">
+      <Link>xian-auth.ico</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

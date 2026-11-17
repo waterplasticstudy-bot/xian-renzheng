@@ -1,0 +1,64 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{CE1DA564-EE93-4057-AC91-4538DAB4B02F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianAuth.Shared", "src\XianAuth.Shared\XianAuth.Shared.csproj", "{3AF82360-FF5D-49DB-B832-F5A9EFB8136B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianAuth.Platform", "src\XianAuth.Platform\XianAuth.Platform.csproj", "{10B300A1-B8DF-4DC2-8944-18B2686BE9B1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianAuth", "src\XianAuth\XianAuth.csproj", "{D417A80E-C8DD-4D17-8728-B1FD87BD1BE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianAuthCore", "src\XianAuthCore\XianAuthCore.csproj", "{B411C6BA-5A5C-45BD-BD27-CC486B3FAE93}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{5FE49D1C-83EC-4358-8999-CD26148F4A6D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianAuth.Tests", "tests\XianAuth.Tests\XianAuth.Tests.csproj", "{98D4BBEC-F75B-487E-85BE-CD18794BE16A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianAuth.WinTests", "tests\XianAuth.WinTests\XianAuth.WinTests.csproj", "{EA37C854-A0D7-4ECC-94D1-F715DEA90377}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3AF82360-FF5D-49DB-B832-F5A9EFB8136B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AF82360-FF5D-49DB-B832-F5A9EFB8136B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AF82360-FF5D-49DB-B832-F5A9EFB8136B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AF82360-FF5D-49DB-B832-F5A9EFB8136B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10B300A1-B8DF-4DC2-8944-18B2686BE9B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10B300A1-B8DF-4DC2-8944-18B2686BE9B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10B300A1-B8DF-4DC2-8944-18B2686BE9B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10B300A1-B8DF-4DC2-8944-18B2686BE9B1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D417A80E-C8DD-4D17-8728-B1FD87BD1BE1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D417A80E-C8DD-4D17-8728-B1FD87BD1BE1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D417A80E-C8DD-4D17-8728-B1FD87BD1BE1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D417A80E-C8DD-4D17-8728-B1FD87BD1BE1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B411C6BA-5A5C-45BD-BD27-CC486B3FAE93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B411C6BA-5A5C-45BD-BD27-CC486B3FAE93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B411C6BA-5A5C-45BD-BD27-CC486B3FAE93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B411C6BA-5A5C-45BD-BD27-CC486B3FAE93}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98D4BBEC-F75B-487E-85BE-CD18794BE16A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98D4BBEC-F75B-487E-85BE-CD18794BE16A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98D4BBEC-F75B-487E-85BE-CD18794BE16A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98D4BBEC-F75B-487E-85BE-CD18794BE16A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA37C854-A0D7-4ECC-94D1-F715DEA90377}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA37C854-A0D7-4ECC-94D1-F715DEA90377}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA37C854-A0D7-4ECC-94D1-F715DEA90377}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA37C854-A0D7-4ECC-94D1-F715DEA90377}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{3AF82360-FF5D-49DB-B832-F5A9EFB8136B} = {CE1DA564-EE93-4057-AC91-4538DAB4B02F}
+		{10B300A1-B8DF-4DC2-8944-18B2686BE9B1} = {CE1DA564-EE93-4057-AC91-4538DAB4B02F}
+		{D417A80E-C8DD-4D17-8728-B1FD87BD1BE1} = {CE1DA564-EE93-4057-AC91-4538DAB4B02F}
+		{B411C6BA-5A5C-45BD-BD27-CC486B3FAE93} = {CE1DA564-EE93-4057-AC91-4538DAB4B02F}
+		{98D4BBEC-F75B-487E-85BE-CD18794BE16A} = {5FE49D1C-83EC-4358-8999-CD26148F4A6D}
+		{EA37C854-A0D7-4ECC-94D1-F715DEA90377} = {5FE49D1C-83EC-4358-8999-CD26148F4A6D}
+	EndGlobalSection
+EndGlobal

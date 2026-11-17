@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>XianAuth</RootNamespace>
+    <AssemblyName>XianAuth.Platform</AssemblyName>
+    <Description>闲·认证的 Windows 实现：无线网卡、计划任务、DPAPI、浏览器识别</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\XianAuth.Shared\XianAuth.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+</Project>
