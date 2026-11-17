@@ -20,6 +20,7 @@ namespace XianAuth
         readonly CheckBox _vpn = new CheckBox();
         readonly CheckBox _interval = new CheckBox();
         readonly NumericUpDown _minutes = new NumericUpDown();
+        readonly NumericUpDown _deadline = new NumericUpDown();
         readonly FeedbackButton _mode = new FeedbackButton();
         readonly FlowLayoutPanel _modePanel = new FlowLayoutPanel();
         readonly FeedbackButton _restore = new FeedbackButton();
@@ -168,6 +169,29 @@ namespace XianAuth
             intervalRow.Controls.Add(minuteLabel);
             AddRow(layout, intervalRow);
 
+            var deadlineRow = new Panel { Height = 32, Width = 460, BackColor = Palette.Background };
+            var deadlineLabel = new Label
+            {
+                Text = "认证时限",
+                AutoSize = true,
+                Location = new Point(0, 6),
+                ForeColor = Palette.Text,
+                BackColor = Palette.Background
+            };
+            _deadline.Minimum = 5;
+            _deadline.Maximum = 120;
+            _deadline.Value = 15;
+            _deadline.Location = new Point(110, 2);
+            _deadline.Width = 70;
+            _deadline.BackColor = Palette.Input;
+            _deadline.ForeColor = Palette.Text;
+            _deadline.ValueChanged += DeadlineChanged;
+            var deadlineUnit = new Label { Text = "秒内完成", AutoSize = true, Location = new Point(188, 6), ForeColor = Palette.Text, BackColor = Palette.Background };
+            deadlineRow.Controls.Add(deadlineLabel);
+            deadlineRow.Controls.Add(_deadline);
+            deadlineRow.Controls.Add(deadlineUnit);
+            AddRow(layout, deadlineRow);
+
             var split = new TableLayoutPanel
             {
                 ColumnCount = 2,
@@ -279,6 +303,10 @@ namespace XianAuth
             if (minutes < _minutes.Minimum) minutes = _minutes.Minimum;
             if (minutes > _minutes.Maximum) minutes = _minutes.Maximum;
             _minutes.Value = minutes;
+            decimal deadline = _config.AuthDeadlineSeconds;
+            if (deadline < _deadline.Minimum) deadline = _deadline.Minimum;
+            if (deadline > _deadline.Maximum) deadline = _deadline.Maximum;
+            _deadline.Value = deadline;
             string savedAccount;
             string savedPassword;
             _hasStoredPassword = false;
@@ -297,6 +325,7 @@ namespace XianAuth
             _password.Text = "";
             var state = Storage.LoadState(_paths);
             UpdatePortalLabel();
+            _banner.ShowTiming(TimingCalculator.Describe(state.LastTiming));
             if (!string.IsNullOrEmpty(state.LastSummary))
                 _banner.ShowMuted(state.LastSummary);
             else
@@ -427,6 +456,21 @@ namespace XianAuth
             }
         }
 
+        void DeadlineChanged(object sender, EventArgs e)
+        {
+            if (_loading || _busy)
+                return;
+            _config.AuthDeadlineSeconds = (int)_deadline.Value;
+            Storage.SaveConfig(_paths, _config);
+            _banner.ShowOk("认证时限已设为 " + _config.AuthDeadlineSeconds + " 秒。");
+        }
+
+        void RefreshTiming()
+        {
+            var state = Storage.LoadState(_paths);
+            _banner.ShowTiming(TimingCalculator.Describe(state.LastTiming));
+        }
+
         void VpnChanged(object sender, EventArgs e)
         {
             if (_loading || _busy)
@@ -526,6 +570,7 @@ namespace XianAuth
                     _banner.ShowErr(text);
                 else
                     _banner.ShowOk(text);
+                RefreshTiming();
             };
             worker.RunWorkerAsync();
         }
@@ -721,6 +766,7 @@ namespace XianAuth
             _config.TriggerSleep = _sleep.Checked;
             _config.IntervalEnabled = _interval.Checked;
             _config.IntervalMinutes = (int)_minutes.Value;
+            _config.AuthDeadlineSeconds = (int)_deadline.Value;
             _auto.On = auto;
             Storage.SaveConfig(_paths, _config);
         }

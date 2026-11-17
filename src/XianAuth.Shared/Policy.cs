@@ -6,6 +6,7 @@ namespace XianAuth
     public enum TriggerKind
     {
         Boot,
+        Logon,
         Resume,
         Sleep,
         Wlan,
@@ -158,6 +159,7 @@ namespace XianAuth
                     return true;
                 case TriggerKind.Wlan:
                 case TriggerKind.Unlock:
+                case TriggerKind.Logon:
                     return config.AutoAuthEnabled;
                 case TriggerKind.Interval:
                     return config.AutoAuthEnabled && config.IntervalEnabled;
